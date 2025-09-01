@@ -39,7 +39,8 @@ Resources:
               OutputArtifacts:
                 - Name: SourceOutput
               Configuration:
-                ConnectionArn: !GetAtt MyGitHubRepoConnection.ConnectionArn
+                # ConnectionArn: !GetAtt MyGitHubRepoConnection.ConnectionArn
+                ConnectionArn: !ImportValue MyGitHubRepoConnectionArn
                 FullRepositoryId: !Sub '${GitHubOwner}/${GitHubRepo}'
                 BranchName: !Ref GitHubBranch
                 
@@ -90,11 +91,11 @@ Resources:
                 ChangeSetName: !Sub '${StackName}-changeset'
                 RoleArn: !GetAtt CloudFormationServiceRole.Arn
                 
-  MyGitHubRepoConnection:
-    Type: AWS::CodeStarConnections::Connection
-    Properties:
-      ConnectionName: MyGitHubRepo-Connection
-      ProviderType: GitHub
+  # MyGitHubRepoConnection:
+  #   Type: AWS::CodeStarConnections::Connection
+  #   Properties:
+  #     ConnectionName: MyGitHubRepo-Connection
+  #     ProviderType: GitHub
 
   PipelineArtifactBucket:
     Type: AWS::S3::Bucket
@@ -130,7 +131,8 @@ Resources:
               - Effect: Allow
                 Action:
                   - codestar-connections:UseConnection
-                Resource: !GetAtt MyGitHubRepoConnection.ConnectionArn
+                # Resource: !GetAtt MyGitHubRepoConnection.ConnectionArn
+                Resource: !ImportValue MyGitHubRepoConnectionArn
               - Effect: Allow
                 Action:
                   - "cloudformation:CreateStack"

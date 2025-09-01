@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CodeStar GitHub connection.
+
+Resources:
+  MyGitHubRepoConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties:
+      ConnectionName: MyGitHubRepo-Connection
+      ProviderType: GitHub
+
+Outputs:
+  ConnectionArn:
+    Description: The ARN of the CodeStar GitHub connection.
+    Value: !Ref MyGitHubRepoConnection
+    Export:
+      Name: MyGitHubRepoConnectionArn
