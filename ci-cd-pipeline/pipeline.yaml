@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: CI/CD Pipeline for deploying a CloudFormation template from a GitHub repository.
+Description: A complete CI/CD pipeline template with a CodeStar GitHub connection.
 
 Parameters:
   GitHubOwner:
@@ -7,22 +7,18 @@ Parameters:
     Description: The owner of the GitHub repository (e.g., your-github-username).
   GitHubRepo:
     Type: String
-    Description: The name of the GitHub repository (e.g., aws-cf-project).
+    Description: The name of the GitHub repository (e.g., my-app-repo).
   GitHubBranch:
     Type: String
     Description: The branch to use for the pipeline (e.g., main).
     Default: main
-  GitHubToken:
-    Type: String
-    Description: Your GitHub Personal Access Token with repo scope.
-    NoEcho: true
   StackName:
     Type: String
     Description: The name of the CloudFormation stack to create/update.
   TemplateFilePath:
     Type: String
     Description: The path to the CloudFormation template file within the repository (e.g., my-template.yaml).
-
+    
 Resources:
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -37,18 +33,16 @@ Resources:
             - Name: Source
               ActionTypeId:
                 Category: Source
-                Owner: ThirdParty
-                Provider: GitHub
+                Owner: AWS
+                Provider: CodeStarSourceConnection
                 Version: '1'
               OutputArtifacts:
                 - Name: SourceOutput
               Configuration:
-                Owner: !Ref GitHubOwner
-                Repo: !Ref GitHubRepo
-                Branch: !Ref GitHubBranch
-                PollForSourceChanges: true
-                OAuthToken: !Ref GitHubToken
-
+                ConnectionArn: !GetAtt MyGitHubRepoConnection.ConnectionArn
+                FullRepositoryId: !Sub '${GitHubOwner}/${GitHubRepo}'
+                BranchName: !Ref GitHubBranch
+                
         - Name: CreateChangeSet
           Actions:
             - Name: CreateChangeSet
@@ -65,7 +59,7 @@ Resources:
                 ChangeSetName: !Sub '${StackName}-changeset'
                 TemplatePath: !Sub 'SourceOutput::${TemplateFilePath}'
                 RoleArn: !GetAtt CloudFormationServiceRole.Arn
-
+                
         - Name: ApproveChangeSet
           Actions:
             - Name: ApproveChangeSet
@@ -95,6 +89,12 @@ Resources:
                 StackName: !Ref StackName
                 ChangeSetName: !Sub '${StackName}-changeset'
                 RoleArn: !GetAtt CloudFormationServiceRole.Arn
+                
+  MyGitHubRepoConnection:
+    Type: AWS::CodeStarConnections::Connection
+    Properties:
+      ConnectionName: MyGitHubRepo-Connection
+      ProviderType: GitHub
 
   PipelineArtifactBucket:
     Type: AWS::S3::Bucket
@@ -129,6 +129,10 @@ Resources:
                   - !Sub '${PipelineArtifactBucket.Arn}/*'
               - Effect: Allow
                 Action:
+                  - codestar-connections:UseConnection
+                Resource: !GetAtt MyGitHubRepoConnection.ConnectionArn
+              - Effect: Allow
+                Action:
                   - "cloudformation:CreateStack"
                   - "cloudformation:DeleteStack"
                   - "cloudformation:DescribeStacks"
@@ -139,6 +143,10 @@ Resources:
                   - "cloudformation:DescribeStackEvents"
                   - "iam:PassRole"
                 Resource: '*'
+              - Effect: Allow
+                Action:
+                  - "ssm:GetParameters"
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
 
   CloudFormationServiceRole:
     Type: AWS::IAM::Role
