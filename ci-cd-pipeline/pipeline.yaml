@@ -1,23 +1,21 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: CI/CD Pipeline for deploying a CloudFormation template from a GitHub repository using SSM Parameters.
+Description: CI/CD Pipeline for deploying a CloudFormation template from a GitHub repository.
 
 Parameters:
-  GitHubOwnerParameterName:
+  GitHubOwner:
     Type: String
-    Default: /codepipeline/github/owner
-    Description: The name of the SSM parameter for the GitHub repository owner.
-  GitHubRepoParameterName:
+    Description: The owner of the GitHub repository (e.g., your-github-username).
+  GitHubRepo:
     Type: String
-    Default: /codepipeline/github/repo
-    Description: The name of the SSM parameter for the GitHub repository name.
-  GitHubBranchParameterName:
+    Description: The name of the GitHub repository (e.g., aws-cf-project).
+  GitHubBranch:
     Type: String
-    Default: /codepipeline/github/branch
-    Description: The name of the SSM parameter for the GitHub branch.
-  GitHubTokenParameterName:
+    Description: The branch to use for the pipeline (e.g., main).
+    Default: main
+  GitHubToken:
     Type: String
-    Default: /codepipeline/github/token
-    Description: The name of the SSM parameter for the GitHub Personal Access Token.
+    Description: Your GitHub Personal Access Token with repo scope.
+    NoEcho: true
   StackName:
     Type: String
     Description: The name of the CloudFormation stack to create/update.
@@ -45,11 +43,11 @@ Resources:
               OutputArtifacts:
                 - Name: SourceOutput
               Configuration:
-                Owner: !Sub '{{resolve:ssm:${GitHubOwnerParameterName}}}'
-                Repo: !Sub '{{resolve:ssm:${GitHubRepoParameterName}}}'
-                Branch: !Sub '{{resolve:ssm:${GitHubBranchParameterName}}}'
+                Owner: !Ref GitHubOwner
+                Repo: !Ref GitHubRepo
+                Branch: !Ref GitHubBranch
                 PollForSourceChanges: true
-                OAuthToken: !Sub '{{resolve:ssm-secure:${GitHubTokenParameterName}}}'
+                OAuthToken: !Ref GitHubToken
 
         - Name: CreateChangeSet
           Actions:
@@ -141,10 +139,6 @@ Resources:
                   - "cloudformation:DescribeStackEvents"
                   - "iam:PassRole"
                 Resource: '*'
-              - Effect: Allow
-                Action:
-                  - ssm:GetParameters
-                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
 
   CloudFormationServiceRole:
     Type: AWS::IAM::Role
